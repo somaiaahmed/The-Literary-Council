@@ -16,7 +16,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from pathlib import Path
 
-import google.generativeai as genai
+from google import genai
 
 from agents.graph import AGENT_DEFINITIONS
 
@@ -29,7 +29,7 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if not GEMINI_API_KEY:
     raise ValueError("GEMINI_API_KEY not found in .env")
 
-genai.configure(api_key=GEMINI_API_KEY)
+# genai.configure(api_key=GEMINI_API_KEY)
 
 # --------------------------------------------------
 # FastAPI App
@@ -57,7 +57,9 @@ class AnalyzeRequest(BaseModel):
 # Helper
 # --------------------------------------------------
 async def ask_gemini(system_prompt: str, user_prompt: str):
-    model = genai.GenerativeModel("gemini-3-flash-preview")
+    client = genai.Client(api_key=GEMINI_API_KEY)
+
+    model = 'gemini-2.0-flash-lite'
 
     prompt = f"""
 {system_prompt}
@@ -66,7 +68,11 @@ USER SCENARIO:
 {user_prompt}
 """
 
-    response = await asyncio.to_thread(model.generate_content, prompt)
+    response = await asyncio.to_thread(
+        client.models.generate_content,
+        model=model,
+        contents=prompt
+    )
     return response.text
 
 
