@@ -13,42 +13,56 @@
     --text: #f5eee2;
     --muted: #b9aa95;
 
-    --camus: #5c6488;
-    --kafka: #7c5a42;
-    --idiot: #4d8062;
+    /* Psychology / self-help themed colors */
+    --nvc: #4ade80;
+    /* empathy / communication */
+    --atomic: #38bdf8;
+    /* habits / systems */
+    --thinking: #a78bfa;
+    /* cognition / biases */
+    --social: #f472b6;
+    /* relationships / society */
 }
 
+/* ─── Base ─────────────────────────────────── */
 body {
     background: radial-gradient(circle at top left, #1c1712, #0f0d0a 60%);
     color: var(--text);
-    font-family: Inter, sans-serif;
+    font-family: "Crimson Pro", Georgia, serif;
     min-height: 100vh;
 }
 
 .wrapper {
-    max-width: 1100px;
+    max-width: 1160px;
     margin: auto;
-    padding: 50px 25px 80px;
+    padding: 50px 25px 100px;
 }
 
+.hidden {
+    display: none !important;
+}
+
+/* ─── Header ────────────────────────────────── */
 header {
     text-align: center;
-    margin-bottom: 50px;
+    margin-bottom: 60px;
 }
 
 .eyebrow {
     color: var(--gold);
-    font-size: 12px;
+    font-size: 11px;
     letter-spacing: 4px;
     text-transform: uppercase;
-    margin-bottom: 15px;
+    font-family: "DM Mono", monospace;
+    margin-bottom: 16px;
 }
 
 h1 {
     font-family: "Playfair Display", serif;
-    font-size: clamp(38px, 7vw, 68px);
+    font-size: clamp(38px, 7vw, 70px);
     line-height: 1.05;
-    margin-bottom: 15px;
+    margin-bottom: 16px;
+    font-weight: 900;
 }
 
 h1 span {
@@ -57,40 +71,43 @@ h1 span {
 }
 
 .tagline {
-    max-width: 700px;
+    max-width: 680px;
     margin: auto;
     color: var(--muted);
     line-height: 1.8;
-    font-size: 15px;
+    font-size: 17px;
 }
 
+/* ─── Section ───────────────────────────────── */
 .section {
-    margin-top: 45px;
+    margin-top: 50px;
 }
 
 .label {
-    font-size: 11px;
+    font-size: 10px;
     color: var(--gold);
     text-transform: uppercase;
     letter-spacing: 3px;
+    font-family: "DM Mono", monospace;
     margin-bottom: 8px;
 }
 
 .title {
     font-family: "Playfair Display", serif;
-    font-size: 28px;
+    font-size: 30px;
     margin-bottom: 8px;
 }
 
 .sub {
     color: var(--muted);
-    font-size: 14px;
-    margin-bottom: 24px;
+    font-size: 15px;
+    margin-bottom: 26px;
 }
 
+/* ─── Council Cards ─────────────────────────── */
 .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     gap: 18px;
 }
 
@@ -99,12 +116,48 @@ h1 span {
     border: 1px solid var(--line);
     border-radius: 16px;
     padding: 22px;
-    transition: .25s;
+    transition: transform .25s, border-color .25s;
+    cursor: default;
 }
 
 .card:hover {
     transform: translateY(-4px);
     border-color: var(--gold);
+}
+
+.card[data-agent="nvc"] {
+    border-left: 3px solid var(--nvc);
+}
+
+.card[data-agent="atomic"] {
+    border-left: 3px solid var(--atomic);
+}
+
+.card[data-agent="thinking"] {
+    border-left: 3px solid var(--thinking);
+}
+
+.card[data-agent="social"] {
+    border-left: 3px solid var(--social);
+}
+
+.card {
+    position: relative;
+    overflow: hidden;
+}
+
+/* soft glow accent */
+.card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    background: radial-gradient(circle at top left, rgba(214, 179, 106, 0.08), transparent 60%);
+    transition: opacity .3s;
+}
+
+.card:hover::after {
+    opacity: 1;
 }
 
 .icon {
@@ -114,7 +167,7 @@ h1 span {
 
 .name {
     font-family: "Playfair Display", serif;
-    font-size: 20px;
+    font-size: 19px;
     margin-bottom: 5px;
 }
 
@@ -125,12 +178,21 @@ h1 span {
     margin-bottom: 10px;
 }
 
+.book {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    font-size: 12px;
+}
+
 .desc {
     color: #ddd2c3;
     font-size: 14px;
     line-height: 1.7;
 }
 
+/* ─── Input ─────────────────────────────────── */
 .input-box {
     background: var(--paper);
     border: 1px solid var(--line);
@@ -141,42 +203,57 @@ h1 span {
 textarea {
     width: 100%;
     background: #0f0d0a;
-    color: white;
+    color: var(--text);
     border: 1px solid var(--line);
     border-radius: 12px;
     padding: 14px;
-    font-size: 14px;
-    margin-top: 12px;
+    font-size: 16px;
+    font-family: "Crimson Pro", serif;
     outline: none;
     min-height: 140px;
     resize: vertical;
+    transition: border-color .2s;
 }
 
 textarea:focus {
     border-color: var(--gold);
 }
 
+.input-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 14px;
+}
+
+.char-count {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: "DM Mono", monospace;
+}
+
 .pills {
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
-    margin-bottom: 15px;
+    margin-bottom: 16px;
 }
 
 .pill {
-    padding: 10px 16px;
+    padding: 9px 16px;
     border-radius: 999px;
     border: 1px solid var(--line);
     cursor: pointer;
     font-size: 14px;
     color: var(--muted);
     background: var(--card);
+    transition: border-color .2s, color .2s;
 }
 
 .pill:hover,
 .pill.active {
     border-color: var(--gold);
-    color: white;
+    color: var(--text);
 }
 
 button {
@@ -188,50 +265,234 @@ button {
     font-weight: 600;
     cursor: pointer;
     font-size: 15px;
+    font-family: "Crimson Pro", serif;
+    transition: opacity .2s, transform .1s;
 }
 
 button:hover {
     opacity: .9;
 }
 
-#results {
-    margin-top: 35px;
+button:active {
+    transform: scale(.98);
 }
 
-.result-card {
+button:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+/* ─── Agent Output Grid ─────────────────────── */
+.agent-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.agent-output-card {
     background: var(--card);
     border: 1px solid var(--line);
     border-radius: 16px;
-    margin-bottom: 18px;
     overflow: hidden;
+    animation: fadeUp .4s ease both;
 }
 
-.result-head {
-    padding: 16px 20px;
+@keyframes fadeUp {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.agent-output-card[data-agent="nvc"] {
+    border-top: 3px solid var(--nvc);
+}
+
+.agent-output-card[data-agent="kafka"] {
+    border-top: 3px solid var(--kafka);
+}
+
+.agent-output-card[data-agent="camus"] {
+    border-top: 3px solid var(--camus);
+}
+
+.agent-output-card[data-agent="dostoevsky"] {
+    border-top: 3px solid var(--dostoevsky);
+}
+
+.agent-output-head {
+    padding: 14px 18px;
     border-bottom: 1px solid var(--line);
     display: flex;
     align-items: center;
     gap: 10px;
 }
 
-.dot {
-    width: 10px;
-    height: 10px;
+.agent-status-dot {
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
+    background: var(--line);
+    transition: background .3s;
+    flex-shrink: 0;
 }
 
-.result-body {
-    padding: 20px;
+.agent-status-dot.loading {
+    background: var(--gold);
+    animation: blink 1s infinite;
+}
+
+.agent-status-dot.done {
+    background: #4caf50;
+}
+
+@keyframes blink {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: .3;
+    }
+}
+
+.agent-head-icon {
+    font-size: 18px;
+}
+
+.agent-head-name {
+    font-family: "Playfair Display", serif;
+    font-size: 16px;
+    flex: 1;
+}
+
+.agent-head-book {
+    font-size: 12px;
+    color: var(--muted);
+    font-style: italic;
+}
+
+.agent-output-body {
+    padding: 18px;
+    font-size: 15px;
+    line-height: 1.85;
+    color: #e7ddcf;
+    min-height: 80px;
+}
+
+.agent-output-body p {
+    margin-bottom: 10px;
+}
+
+.agent-output-body p:last-child {
+    margin-bottom: 0;
+}
+
+.agent-output-body strong {
+    color: var(--gold);
+    font-weight: 600;
+}
+
+.agent-output-body {
+    font-family: "Crimson Pro", serif;
+    letter-spacing: 0.2px;
+}
+
+/* section emphasis inside outputs */
+.agent-output-body h4 {
+    color: var(--gold);
+    margin-top: 10px;
+    font-size: 14px;
+}
+
+.agent-thinking {
+    color: var(--muted);
+    font-style: italic;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.agent-thinking::before {
+    content: "";
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--muted);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ─── Synthesis ──────────────────────────────── */
+.synthesis-card {
+    background: linear-gradient(135deg, #1d1710, #111);
+    border: 1px solid #4a3c27;
+    border-radius: 18px;
+    padding: 28px 30px;
     line-height: 1.9;
+    font-size: 16px;
     color: #e7ddcf;
 }
 
-.synthesis {
-    background: linear-gradient(135deg, #1d1710, #111);
-    border: 1px solid #4a3c27;
+.synthesis-card h3 {
+    font-family: "Playfair Display", serif;
+    font-size: 18px;
+    color: var(--gold);
+    margin: 20px 0 8px;
+}
+
+.synthesis-card h3:first-child {
+    margin-top: 0;
+}
+
+.synthesis-card p {
+    margin-bottom: 10px;
+}
+
+.synthesis-card strong {
+    color: var(--gold);
+}
+
+.synth-loader {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    color: var(--muted);
+    font-style: italic;
+}
+
+.pulse-ring {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--line);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin .9s linear infinite;
+    flex-shrink: 0;
+}
+
+/* ─── Legacy results div ─────────────────────── */
+#results {
+    margin-top: 24px;
 }
 
 .loading {
     color: var(--muted);
     padding: 18px;
+    font-style: italic;
 }
