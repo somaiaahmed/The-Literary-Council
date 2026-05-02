@@ -1,10 +1,25 @@
-# Council of Perspectives — Multi-Agent AI System
+# 📚 Literary Council — Multi-Agent Philosophical Advisor
 
-A production-grade multi-agent decision support system built with:
-- **FastAPI** — async REST + SSE streaming backend
-- **LangGraph** — StateGraph orchestration with parallel agent nodes
-- **LangChain + ChatAnthropic** — LLM calls per agent
-- **HTML/CSS/JS** — rich frontend with real-time streaming UI
+A multi-agent AI system that analyzes interpersonal scenarios through the lens of four distinct intellectual frameworks, then synthesizes their perspectives into unified, actionable wisdom.
+
+---
+
+## What It Does
+
+You describe a real-life situation — a conflict with a friend, an unfair grade, a misunderstanding with your partner — and the Literary Council convenes four specialized AI agents, each grounded in a different book or discipline. They analyze your scenario in parallel, then a synthesizer distills their insights into a final recommendation.
+
+---
+
+## Agents
+
+| Agent | Framework | Focus |
+|---|---|---|
+| 💚 **The Empathic Mediator** | *Nonviolent Communication* — Marshall Rosenberg | Observations, feelings, needs, requests |
+| ⚙️ **The Habit Architect** | *Atomic Habits* — James Clear | Behavioral patterns, identity, small changes |
+| 🧠 **The Cognitive Analyst** | *Thinking, Fast and Slow* — Daniel Kahneman | Cognitive biases, System 1 vs System 2 thinking |
+| 👥 **The Social Lens** | *The Social Animal* — Elliot Aronson | Social perception, attribution theory, group dynamics |
+
+After all four agents respond, a **Synthesizer** identifies convergence, productive tensions, and delivers a final integrated recommendation.
 
 ---
 
@@ -12,94 +27,145 @@ A production-grade multi-agent decision support system built with:
 
 ```
 User Scenario
-     │
-     ▼
-FastAPI /stream (SSE)
-     │
-     ▼
-LangGraph StateGraph
-  ├── single_agent_node (compare mode only)
-  ├── agent_nvc        ─┐
-  ├── agent_kahneman   ─┤  parallel execution
-  ├── agent_covey      ─┤
-  └── agent_stoic      ─┘
-           │
-           ▼
-     synthesis_node
-           │
-           ▼
-     SSE → Frontend (streams each agent as it finishes)
+      │
+      ▼
+ FastAPI Backend
+      │
+      ├──▶ Agent 1 (NVC)        ─┐
+      ├──▶ Agent 2 (Atomic)     ─┤  Parallel via asyncio
+      ├──▶ Agent 3 (Kahneman)   ─┤  Streamed via SSE
+      └──▶ Agent 4 (Aronson)    ─┘
+                                  │
+                                  ▼
+                            Synthesizer
+                                  │
+                                  ▼
+                          Final Recommendation
 ```
 
-## Agents
-
-| Agent | Book | Reasoning Lens |
-|-------|------|---------------|
-| The Empathic Mediator | Nonviolent Communication — Rosenberg | Observations → Feelings → Needs → Requests |
-| The Cognitive Auditor | Thinking, Fast and Slow — Kahneman | System 1/2, cognitive bias detection |
-| The Principled Strategist | The 7 Habits — Covey | Circle of Influence, Win-Win, Habit framework |
-| The Stoic Philosopher | Meditations — Marcus Aurelius | Dichotomy of control, virtue, equanimity |
-
----
-
-## Setup & Run
-
-### 1. Install dependencies
-```bash
-pip install -r requirements.txt
-```
-
-### 2. Run the server
-```bash
-cd council
-uvicorn main:app --reload --port 8000
-```
-
-### 3. Open in browser
-```
-http://localhost:8000
-```
-
-### 4. Use
-- Enter your Anthropic API key (sk-ant-...)
-- Pick or write a scenario
-- Toggle "Compare" mode to see single-agent vs multi-agent side by side
-- Click "Consult the Council"
-
-Responses stream in real-time via SSE as each agent finishes.
-
----
-
-## API Endpoints
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/` | Serves the HTML frontend |
-| GET | `/agents` | Returns agent metadata (JSON) |
-| POST | `/analyze` | Full result (waits for all agents) |
-| POST | `/stream` | SSE streaming (real-time per-agent) |
-| GET | `/health` | Health check |
-
-### POST /stream body
-```json
-{
-  "scenario": "My friend accused me of...",
-  "api_key": "sk-ant-...",
-  "mode": "multi"   // or "compare"
-}
-```
+- **Frontend** receives results progressively via **Server-Sent Events (SSE)** — each agent card updates as it finishes, no waiting for all four.
+- **LangGraph** manages the parallel fan-out and state aggregation across agents.
+- **Gemini** (via Google GenAI SDK) powers all agents and the synthesizer.
 
 ---
 
 ## Project Structure
 
 ```
-council/
-├── main.py              # FastAPI app, routes, SSE endpoint
-├── requirements.txt
+literary-council/
+├── main.py                  # FastAPI app, SSE streaming, Gemini calls
 ├── agents/
-│   ├── __init__.py
-│   └── graph.py         # LangGraph StateGraph, agent definitions, nodes
-└── static/
-    └── index.html       # Frontend (HTML + CSS + JS, SSE client)
+│   └── graph.py             # LangGraph graph, agent definitions, state types
+├── static/
+│   ├── index.html           # Frontend UI
+│   └── script.js            # SSE handling, card rendering, UI logic
+├── .env                     # API keys (not committed)
+├── requirements.txt
+└── README.md
 ```
+
+---
+
+## Setup
+
+### 1. Clone and install
+
+```bash
+git clone https://github.com/your-username/literary-council.git
+cd literary-council
+pip install -r requirements.txt
+```
+
+### 2. Configure environment
+
+Create a `.env` file in the project root:
+
+```env
+GEMINI_API_KEY=your_google_gemini_api_key_here
+```
+
+Get your key at [Google AI Studio](https://aistudio.google.com/).
+
+### 3. Run
+
+```bash
+uvicorn main:app --reload
+```
+
+Then open [http://localhost:8000](http://localhost:8000) in your browser.
+
+---
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/` | Serves the frontend |
+| `POST` | `/analyze` | Runs the council; streams results via SSE |
+| `GET` | `/agents` | Returns public agent metadata (no system prompts) |
+| `GET` | `/health` | Health check |
+
+### `/analyze` request body
+
+```json
+{
+  "scenario": "My friend says I've been distant lately...",
+  "mode": "multi"
+}
+```
+
+### SSE event types emitted
+
+| Event | Payload | When |
+|---|---|---|
+| `init` | `{ agents: [...] }` | Immediately — lets UI build skeleton cards |
+| `agent_result` | `{ agent_key, agent_name, book, content, ... }` | As each agent finishes |
+| `synthesis` | `{ content }` | After all agents complete |
+| `done` | `{}` | Stream complete |
+
+---
+
+## Adding a New Agent
+
+1. Add a new entry to `AGENT_DEFINITIONS` in `agents/graph.py`:
+
+```python
+{
+    "key":   "stoic",
+    "name":  "The Stoic Counselor",
+    "book":  "Meditations — Marcus Aurelius",
+    "color": "#8b7355",
+    "icon":  "🏛️",
+    "system_prompt": """You are based on Stoic philosophy...."""
+}
+```
+
+2. That's it — the graph fans out to all agents automatically.
+
+---
+
+## Requirements
+
+- Python 3.10+
+- `fastapi`
+- `uvicorn`
+- `langgraph`
+- `google-genai`
+- `python-dotenv`
+- `pydantic`
+
+---
+
+## Key Design Decisions
+
+**Why SSE over WebSockets?** SSE is simpler for one-directional server-to-client streaming and works seamlessly with `StreamingResponse` in FastAPI. Since the client only sends one request and then listens, SSE is the right fit.
+
+**Why LangGraph?** The fan-out pattern (one input → many parallel agents → aggregated state) maps cleanly onto LangGraph's `Send()` API. It also makes adding new agents or chaining agents trivial.
+
+**Why hide system prompts?** `get_agent_definitions()` strips `system_prompt` before sending agent metadata to the frontend, keeping the prompts server-side only.
+
+---
+
+## License
+
+MIT
