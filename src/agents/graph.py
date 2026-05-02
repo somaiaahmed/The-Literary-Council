@@ -1,208 +1,190 @@
 """
-Multi-Agent Council — Gemini + LangGraph Clean Parallel Version
+Multi-Agent Council — LangGraph Parallel Execution
+Fixed: Send() now passes scenario into sub-node state.
 """
 
-from typing import TypedDict, Annotated, List
+from typing import TypedDict, Annotated
 import operator
 import os
 import asyncio
-from dotenv import load_dotenv
 
-from langgraph.graph import StateGraph, END, START
+from dotenv import load_dotenv
+from langgraph.graph import StateGraph, END
 from langgraph.types import Send
 
-import google.generativeai as genai
+from google import genai
 
 
-# ─────────────────────────────────────────────
-# Load Gemini
-# ─────────────────────────────────────────────
+# ─── Load ENV ─────────────────────────────────
 load_dotenv()
-
-genai.configure(
-    api_key=os.getenv("GEMINI_API_KEY")
-)
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 
-# ─────────────────────────────────────────────
-# State
-# ─────────────────────────────────────────────
+# ─── Types ────────────────────────────────────
 class AgentResponse(TypedDict):
-    agent_key: str
+    agent_key:  str
     agent_name: str
-    book: str
-    content: str
-    color: str
-    icon: str
+    book:       str
+    content:    str
+    color:      str
+    icon:       str
 
 
 class CouncilState(TypedDict):
-    scenario: str
-    mode: str
-    responses: Annotated[list[AgentResponse], operator.add]
-    synthesis: str
+    scenario:              str
+    mode:                  str
+    responses:             Annotated[list[AgentResponse], operator.add]
+    synthesis:             str
     single_agent_response: str
 
 
-# ─────────────────────────────────────────────
-# Agents Definition (your philosophy engines)
-# ─────────────────────────────────────────────
+# ─── Agent Definitions ────────────────────────
 AGENT_DEFINITIONS = [
     {
-        "key": "nvc",
-        "name": "The Empathic Mediator",
-        "book": "Nonviolent Communication — Rosenberg",
+        "key":   "nvc",
+        "name":  "The Empathic Mediator",
+        "book":  "Nonviolent Communication — Marshall Rosenberg",
         "color": "#3d5a3e",
-        "icon": "💚",
-        "system_prompt": """You are Nonviolent Communication (Marshall Rosenberg).
+        "icon":  "💚",
+        "system_prompt": """You are based on Nonviolent Communication by Marshall Rosenberg.
 
-Structure:
-1. Observations (facts only)
-2. Feelings
-3. Needs
-4. Requests
+Structure your response as:
+1. Observations — what factually happened (no judgment)
+2. Feelings — emotional experience
+3. Needs — unmet psychological needs
+4. Requests — clear, actionable communication
 
-No blame. Only needs. Be deeply empathetic."""
+Rules:
+- No blame or criticism
+- Be compassionate and practical
+- Focus on resolving conflict through empathy"""
     },
     {
-        "key": "kafka",
-        "name": "The Existential Mirror",
-        "book": "Metamorphosis — Franz Kafka",
-        "color": "#2b2b2b",
-        "icon": "🪳",
-        "system_prompt": """You embody Kafka's worldview (The Metamorphosis).
+        "key":   "atomic",
+        "name":  "The Habit Architect",
+        "book":  "Atomic Habits — James Clear",
+        "color": "#2a9d8f",
+        "icon":  "⚙️",
+        "system_prompt": """You are based on Atomic Habits by James Clear.
 
-Interpret the scenario through:
-- Alienation
-- Absurdity
-- Powerlessness
-- Internal guilt vs external judgment
+Analyze the situation through:
+- Behavioral patterns (what repeated actions led here?)
+- Identity (what kind of person is this behavior reinforcing?)
+- Small changes (tiny habits that could fix this)
+- Systems over goals (focus on process, not outcomes)
 
-Be symbolic, psychological, slightly unsettling but insightful."""
+Rules:
+- Be practical and actionable
+- Break advice into small steps
+- Focus on improvement, not blame"""
     },
     {
-        "key": "camus",
-        "name": "The Absurd Philosopher",
-        "book": "The Stranger — Albert Camus",
-        "color": "#b8860b",
-        "icon": "🌅",
-        "system_prompt": """You embody Camus (The Stranger).
+        "key":   "thinking",
+        "name":  "The Cognitive Analyst",
+        "book":  "Thinking, Fast and Slow — Daniel Kahneman",
+        "color": "#457b9d",
+        "icon":  "🧠",
+        "system_prompt": """You are based on Thinking, Fast and Slow by Daniel Kahneman.
 
-Analyze through:
-- Absurdity of meaning
-- Emotional detachment
-- Radical honesty
-- Acceptance of chaos without false meaning
+Analyze using:
+- System 1 (emotional, fast reactions)
+- System 2 (slow, rational thinking)
+- Cognitive biases (misinterpretations, assumptions)
+- Decision errors (why the reaction happened)
 
-Be calm, detached, philosophical."""
+Rules:
+- Be analytical and clear
+- Explain thinking patterns
+- Help the user recognize mental biases"""
     },
     {
-        "key": "dostoevsky",
-        "name": "The Moral Tormentor",
-        "book": "The Idiot — Dostoevsky",
-        "color": "#7a2e10",
-        "icon": "⚖️",
-        "system_prompt": """You embody Dostoevsky (The Idiot).
+        "key":   "social",
+        "name":  "The Social Lens",
+        "book":  "The Social Animal — Elliot Aronson",
+        "color": "#6a4c93",
+        "icon":  "👥",
+        "system_prompt": """You are based on social psychology principles from The Social Animal.
 
-Focus on:
-- Moral contradiction
-- Emotional suffering
-- Compassion vs judgment
-- Inner guilt and purity
+Interpret through:
+- Social perception (how others interpret behavior)
+- Attribution theory (intent vs assumption)
+- Group dynamics and relationships
+- Miscommunication patterns
 
-Be emotionally deep, psychologically intense."""
-    },
+Rules:
+- Focus on interpersonal dynamics
+- Explain both perspectives (you vs the other person)
+- Be balanced and insightful"""
+    }
 ]
 
-
-# ─────────────────────────────────────────────
-# Gemini helper
-# ─────────────────────────────────────────────
-async def call_gemini(system_prompt: str, scenario: str) -> str:
-    model = genai.GenerativeModel("gemini-1.5-flash")
-
-    prompt = f"""
-{system_prompt}
-
----
-
-Scenario:
-{scenario}
-"""
-
-    response = await asyncio.to_thread(model.generate_content, prompt)
+# ─── Gemini helper ────────────────────────────
+async def call_gemini(system_prompt: str, scenario: str, model: str = "gemini-2.0-flash-lite") -> str:
+    m = genai.GenerativeModel(model)
+    prompt = f"{system_prompt}\n\n---\n\nScenario:\n{scenario}"
+    response = await asyncio.to_thread(m.generate_content, prompt)
     return response.text
 
 
-# ─────────────────────────────────────────────
-# Parallel Agent Node (IMPORTANT FIX)
-# ─────────────────────────────────────────────
-async def agent_node(state: CouncilState, agent: dict) -> dict:
-    content = await call_gemini(agent["system_prompt"], state["scenario"])
+# ─── Sub-node: run a single agent ─────────────
+# IMPORTANT: Send() passes a dict that becomes this node's full state.
+# We must include "scenario" explicitly in the Send payload (see fanout_agents).
+async def run_agent_node(state: dict) -> dict:
+    agent    = state["agent"]
+    scenario = state["scenario"]  # ← was missing in original
+
+    content = await call_gemini(agent["system_prompt"], scenario)
 
     return {
         "responses": [{
-            "agent_key": agent["key"],
+            "agent_key":  agent["key"],
             "agent_name": agent["name"],
-            "book": agent["book"],
-            "content": content,
-            "color": agent["color"],
-            "icon": agent["icon"],
+            "book":       agent["book"],
+            "content":    content,
+            "color":      agent["color"],
+            "icon":       agent["icon"],
         }]
     }
 
 
-# ─────────────────────────────────────────────
-# Router (TRUE PARALLELISM)
-# ─────────────────────────────────────────────
+# ─── Router: fan out to all agents in parallel ─
 def fanout_agents(state: CouncilState):
+    """
+    Send must include both 'agent' and 'scenario' because the sub-node
+    receives an isolated state dict, not the full CouncilState.
+    """
     return [
-        Send("run_agent", {"agent": agent})
+        Send("run_agent", {"agent": agent, "scenario": state["scenario"]})
         for agent in AGENT_DEFINITIONS
     ]
 
 
-# ─────────────────────────────────────────────
-# Generic runner node
-# ─────────────────────────────────────────────
-async def run_agent_node(state: dict) -> dict:
-    agent = state["agent"]
-    content = await call_gemini(agent["system_prompt"], state["scenario"])
+# ─── Node: optional single-agent baseline ─────
+async def single_agent_node(state: CouncilState) -> dict:
+    if state["mode"] != "compare":
+        return {"single_agent_response": ""}
 
-    return {
-        "responses": [{
-            "agent_key": agent["key"],
-            "agent_name": agent["name"],
-            "book": agent["book"],
-            "content": content,
-            "color": agent["color"],
-            "icon": agent["icon"],
-        }]
-    }
+    content = await call_gemini(
+        "You are a helpful, balanced AI assistant. Give thoughtful advice.",
+        state["scenario"],
+    )
+    return {"single_agent_response": content}
 
 
-# ─────────────────────────────────────────────
-# Synthesis node
-# ─────────────────────────────────────────────
+# ─── Node: synthesize all responses ───────────
 async def synthesis_node(state: CouncilState) -> dict:
-
-    model = genai.GenerativeModel("gemini-1.5-pro")
-
-    compiled = "\n\n".join([
+    compiled = "\n\n".join(
         f"{r['agent_name']} ({r['book']}):\n{r['content']}"
         for r in state["responses"]
-    ])
+    )
 
-    prompt = f"""
-You are the Council Synthesizer.
+    prompt = f"""You are the Council Synthesizer.
 
 Produce:
 
-1. CONVERGENCE
-2. TENSIONS
-3. FINAL RECOMMENDATION
-
-Be wise and concise.
+**1. CONVERGENCE** — what all perspectives agree on
+**2. PRODUCTIVE TENSIONS** — meaningful disagreements and why they matter
+**3. FINAL RECOMMENDATION** — concrete, integrated wisdom
 
 Scenario:
 {state['scenario']}
@@ -211,88 +193,45 @@ Analyses:
 {compiled}
 """
 
-    response = await asyncio.to_thread(model.generate_content, prompt)
-
-    return {
-        "synthesis": response.text
-    }
+    # Use a more capable model for synthesis
+    content = await call_gemini("You are a master synthesizer.", prompt, model="gemini-2.0-flash")
+    return {"synthesis": content}
 
 
-# ─────────────────────────────────────────────
-# Optional single agent baseline
-# ─────────────────────────────────────────────
-async def single_agent_node(state: CouncilState) -> dict:
-
-    if state["mode"] != "compare":
-        return {"single_agent_response": ""}
-
-    model = genai.GenerativeModel("gemini-1.5-flash")
-
-    prompt = f"""
-You are a helpful AI assistant.
-
-Give balanced advice.
-
-Scenario:
-{state['scenario']}
-"""
-
-    response = await asyncio.to_thread(model.generate_content, prompt)
-
-    return {
-        "single_agent_response": response.text
-    }
-
-
-# ─────────────────────────────────────────────
-# Build Graph (FIXED PARALLEL DESIGN)
-# ─────────────────────────────────────────────
+# ─── Build Graph ──────────────────────────────
 def build_graph():
-
     builder = StateGraph(CouncilState)
 
-    # nodes
+    builder.add_node("single",    single_agent_node)
     builder.add_node("run_agent", run_agent_node)
     builder.add_node("synthesis", synthesis_node)
-    builder.add_node("single", single_agent_node)
 
-    # entry
     builder.set_entry_point("single")
 
-    # parallel fan-out (THIS IS THE FIX)
-    builder.add_conditional_edges(
-        "single",
-        fanout_agents
-    )
+    # Fan out from single → all agents in parallel
+    builder.add_conditional_edges("single", fanout_agents)
 
-    # after agents → synthesis
+    # All agents converge → synthesis
     builder.add_edge("run_agent", "synthesis")
-
-    # end
     builder.add_edge("synthesis", END)
 
     return builder.compile()
 
 
-# ─────────────────────────────────────────────
-# Public API
-# ─────────────────────────────────────────────
-async def run_council(scenario: str, mode: str = "multi"):
-
+# ─── Public API ───────────────────────────────
+async def run_council(scenario: str, mode: str = "multi") -> dict:
     graph = build_graph()
-
-    result = await graph.ainvoke({
-        "scenario": scenario,
-        "mode": mode,
-        "responses": [],
-        "synthesis": "",
-        "single_agent_response": ""
+    return await graph.ainvoke({
+        "scenario":              scenario,
+        "mode":                  mode,
+        "responses":             [],
+        "synthesis":             "",
+        "single_agent_response": "",
     })
 
-    return result
 
-
-def get_agent_definitions():
+def get_agent_definitions() -> list[dict]:
+    """Return agent metadata without system_prompt (safe for frontend)."""
     return [
         {k: v for k, v in a.items() if k != "system_prompt"}
         for a in AGENT_DEFINITIONS
