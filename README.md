@@ -2,6 +2,8 @@
 
 A multi-agent AI system that analyzes interpersonal scenarios through the lens of four distinct intellectual frameworks, then synthesizes their perspectives into unified, actionable wisdom.
 
+![app](data/app.png)
+
 ---
 
 ## What It Does
@@ -20,7 +22,6 @@ You describe a real-life situation — a conflict with a friend, an unfair grade
 | 👥 **The Social Lens** | *The Social Animal* — Elliot Aronson | Social perception, attribution theory, group dynamics |
 
 After all four agents respond, a **Synthesizer** identifies convergence, productive tensions, and delivers a final integrated recommendation.
-
 ---
 
 ## Architecture
@@ -71,7 +72,7 @@ literary-council/
 ### 1. Clone and install
 
 ```bash
-git clone https://github.com/your-username/literary-council.git
+git clone https://github.com/somaiaahmed/literary-council.git
 cd literary-council
 pip install -r requirements.txt
 ```
